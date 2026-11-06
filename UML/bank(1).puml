@@ -1,0 +1,371 @@
+@startuml bank
+!include style(1).puml
+' lines are easier to follow than ortho when there are many arrows
+skinparam linetype polyline
+skinparam ranksep 90
+skinparam nodesep 50
+
+title Bank Accounts — Class Diagram (packages + JCF service layer)
+
+' external types from JDK
+interface "Comparable<Account>" as ComparableAccount {
+  + compareTo(other: Account): int
+}
+interface "Comparable<TransactionRequest>" as ComparableRequest {
+  + compareTo(other: TransactionRequest): int
+}
+class RuntimeException <<java.lang>>
+
+' ===================== package account =====================
+package account {
+  interface Depositable {
+    + deposit(sc: Scanner): void
+  }
+
+  interface Withdrawable {
+    + withdraw(sc: Scanner): void
+  }
+
+  abstract class Account {
+    # name: String
+    # surname: String
+    # accountNumber: int
+    # quantityOfMoney: int
+    # phoneNumber: int
+    # history: List<Transaction>
+    --
+    + Account()
+    + Account(name: String, surname: String, accountNumber: int,\n quantityOfMoney: int, phoneNumber: int)
+    + getName(): String
+    + getSurname(): String
+    + getAccountNumber(): int
+    + getQuantityOfMoney(): int
+    + getPhoneNumber(): int
+    + getHistory(): List<Transaction>
+    + getType(): String
+    + setName(name: String): void
+    + setSurname(surname: String): void
+    + setAccountNumber(accountNumber: int): void
+    + setQuantityOfMoney(quantityOfMoney: int): void
+    + setPhoneNumber(phoneNumber: int): void
+    # addTransaction(type: String, amount: int): void
+    + displayHistory(): void
+    --
+    + {abstract} displayInfo(): void
+    + {abstract} withdraw(sc: Scanner): void
+    + {abstract} deposit(sc: Scanner): void
+    + {abstract} withdrawMoney(amount: int): boolean
+    + {abstract} depositMoney(amount: int): boolean
+    --
+    + equals(o: Object): boolean
+    + hashCode(): int
+    + compareTo(other: Account): int
+    + toString(): String
+  }
+
+  class CreditAccount {
+    - debt: double
+    # creditLimit: int
+    # debtProcent: double
+    --
+    + CreditAccount(name: String, surname: String, accountNumber: int,\n quantityOfMoney: int, phoneNumber: int,\n creditLimit: int, debtProcent: double)
+    + getCreditLimit(): int
+    + getDebtProcent(): double
+    + getDebt(): double
+    + setCreditLimit(creditLimit: int): void
+    + setDebtProcent(debtProcent: double): void
+    --
+    + displayInfo(): void
+    + withdraw(sc: Scanner): void
+    + deposit(sc: Scanner): void
+    + withdrawMoney(amount: int): boolean
+    + depositMoney(amount: int): boolean
+    + payOffLoan(sc: Scanner): void
+  }
+
+  class DebitAccount {
+    # monthlyFee: int
+    --
+    + DebitAccount(name: String, surname: String, accountNumber: int,\n quantityOfMoney: int, phoneNumber: int,\n monthlyFee: int)
+    + getMonthlyFee(): int
+    + setMonthlyFee(monthlyFee: int): void
+    --
+    + displayInfo(): void
+    + withdraw(sc: Scanner): void
+    + deposit(sc: Scanner): void
+    + withdrawMoney(amount: int): boolean
+    + depositMoney(amount: int): boolean
+  }
+
+  class SavingsAccount {
+    # incomePercent: double
+    --
+    + SavingsAccount(name: String, surname: String, accountNumber: int,\n quantityOfMoney: int, phoneNumber: int,\n incomePercent: double)
+    + getIncomePercent(): double
+    + setIncomePercent(incomePercent: double): void
+    --
+    + displayInfo(): void
+    + withdraw(sc: Scanner): void
+    + deposit(sc: Scanner): void
+    + withdrawMoney(amount: int): boolean
+    + depositMoney(amount: int): boolean
+    + addInterest(): void
+  }
+
+  class BusinessAccount {
+    # company: String
+    # taxPercent: double
+    --
+    + BusinessAccount(name: String, surname: String, accountNumber: int,\n quantityOfMoney: int, phoneNumber: int,\n company: String, taxPercent: double)
+    + getCompany(): String
+    + getTaxPercent(): double
+    + setCompany(company: String): void
+    + setTaxPercent(taxPercent: double): void
+    --
+    + displayInfo(): void
+    + withdraw(sc: Scanner): void
+    + deposit(sc: Scanner): void
+    + withdrawMoney(amount: int): boolean
+    + depositMoney(amount: int): boolean
+  }
+
+  class AccountComparators {
+    - AccountComparators()
+    + {static} BY_BALANCE_DESC: Comparator<Account>
+    + {static} BY_SURNAME_NAME: Comparator<Account>
+    + {static} BY_TYPE_THEN_BALANCE: Comparator<Account>
+  }
+}
+
+' ===================== package transaction =====================
+package transaction {
+  class Transaction {
+    - {static} counter: int
+    - id: int
+    - type: String
+    - amount: int
+    - balanceAfter: int
+    --
+    + Transaction(type: String, amount: int, balanceAfter: int)
+    + getId(): int
+    + getType(): String
+    + getAmount(): int
+    + getBalanceAfter(): int
+    + equals(o: Object): boolean
+    + hashCode(): int
+    + toString(): String
+  }
+
+  enum RequestType {
+    DEPOSIT
+    WITHDRAW
+  }
+
+  class TransactionRequest {
+    - {static} counter: int
+    - id: int
+    - accountNumber: int
+    - type: RequestType
+    - amount: int
+    - priority: int
+    - status: String
+    --
+    + TransactionRequest(accountNumber: int, type: RequestType,\n amount: int, priority: int)
+    + getId(): int
+    + getAccountNumber(): int
+    + getType(): RequestType
+    + getAmount(): int
+    + getPriority(): int
+    + getStatus(): String
+    + setAccountNumber(accountNumber: int): void
+    + setStatus(status: String): void
+    + compareTo(other: TransactionRequest): int
+    + equals(o: Object): boolean
+    + hashCode(): int
+    + toString(): String
+  }
+}
+
+' ===================== package exception =====================
+package exception {
+  class AccountNotFoundException {
+    + AccountNotFoundException(accountNumber: int)
+  }
+}
+
+' ===================== package service =====================
+package service {
+  class BankService {
+    - accounts: List<Account>
+    - accountsByNumber: Map<Integer, Account>
+    - accountsByType: Map<String, List<Account>>
+    - usedPhones: Set<Integer>
+    - requestQueue: Queue<TransactionRequest>
+    - processedRequests: List<TransactionRequest>
+    --
+    + addAccount(acc: Account): void
+    + getAccount(accountNumber: int): Account
+    + exists(accountNumber: int): boolean
+    + isPhoneUsed(phone: int): boolean
+    + updateOwner(accountNumber: int, name: String,\n surname: String, phone: int): void
+    + changeAccountNumber(oldNumber: int, newNumber: int): void
+    + removeAccount(accountNumber: int): Account
+    + generateAccountNumber(): int
+    --
+    + getAllAccounts(): List<Account>
+    + getAccountsNatural(): List<Account>
+    + getSortedAccounts(comparator: Comparator<Account>): List<Account>
+    + getByType(type: String): List<Account>
+    + filterByMinBalance(minBalance: int): List<Account>
+    + printAccounts(list: List<Account>): void
+    --
+    + submitRequest(accountNumber: int, type: RequestType,\n amount: int): TransactionRequest
+    + processNextRequest(): boolean
+    + processAllRequests(): void
+    + getPendingCount(): int
+    + printPendingRequests(): void
+    --
+    + getTotalMoney(): int
+    + printReport(): void
+  }
+}
+
+' ===================== package tariff =====================
+package tariff {
+  class CardTariff {
+    - cardType: String
+    - creditType: String
+    - creditLimit: int
+    - percent: double
+    - monthlyFee: int
+    - company: String
+    - taxPercent: double
+    --
+    + getCardType(): String
+    + getCreditType(): String
+    + getCreditLimit(): int
+    + getPercent(): double
+    + getMonthlyFee(): int
+    + getCompany(): String
+    + getTaxPercent(): double
+    + chooseTariff(sc: Scanner): void
+    - askCompany(sc: Scanner): void
+    - chooseCreditType(sc: Scanner): void
+    + displayTariff(): void
+  }
+}
+
+' ===================== package registration =====================
+package registration {
+  class Registration {
+    - name: String
+    - surname: String
+    - phoneNumber: String
+    - password: String
+    --
+    + getName(): String
+    + getSurname(): String
+    + getPhoneNumber(): String
+    + isPhoneValid(phone: String): boolean
+    + isPasswordValid(pass: String): boolean
+    + register(sc: Scanner, service: BankService): void
+    + login(sc: Scanner): boolean
+    + Menu(sc: Scanner, service: BankService): boolean
+  }
+}
+
+' ===================== package menu =====================
+package menu {
+  class ClientMenu {
+    - ClientMenu()
+    + {static} open(sc: Scanner, acc: Account,\n tariff: CardTariff, service: BankService): void
+    - {static} sendRequest(sc: Scanner, acc: Account,\n service: BankService): void
+  }
+
+  class OperatorMenu {
+    - OperatorMenu()
+    + {static} open(sc: Scanner, service: BankService): void
+    - {static} sortMenu(sc: Scanner, service: BankService): void
+    - {static} showByType(sc: Scanner, service: BankService): void
+    - {static} updateOwner(sc: Scanner, service: BankService): void
+  }
+}
+
+' ===================== package runner =====================
+package runner {
+  class Runner {
+    + {static} main(args: String[]): void
+    - {static} readFreeAccountNumber(sc: Scanner,\n service: BankService): int
+    - {static} fillDemoData(service: BankService): void
+  }
+}
+
+' =========================================================
+' RELATIONSHIPS
+' =========================================================
+
+' --- realization (implements) ---
+Account ..|> Depositable
+Account ..|> Withdrawable
+Account ..|> ComparableAccount
+TransactionRequest ..|> ComparableRequest
+
+' --- inheritance (extends) ---
+CreditAccount --|> Account
+DebitAccount --|> Account
+SavingsAccount --|> Account
+BusinessAccount --|> Account
+AccountNotFoundException --|> RuntimeException
+
+' --- composition ---
+' Account.history = new ArrayList<>(); Account.addTransaction() does new Transaction(...)
+Account "1" *-- "0..*" Transaction : history
+' BankService.submitRequest() does new TransactionRequest(...), owns the queue
+BankService "1" *-- "0..*" TransactionRequest : requestQueue,\nprocessedRequests
+
+' --- aggregation ---
+' accounts are created outside (Runner) and passed into addAccount()
+BankService "1" o-- "0..*" Account : accounts,\naccountsByNumber,\naccountsByType
+
+' --- association (field of that type) ---
+TransactionRequest --> RequestType : type
+
+' --- logical link by key, not an object reference ---
+TransactionRequest "0..*" .. "1" Account : accountNumber (int)
+
+' --- dependencies: service / helpers ---
+BankService ..> AccountComparators : uses
+BankService ..> AccountNotFoundException : <<throws>>
+BankService ..> BusinessAccount : instanceof (priority)
+BankService ..> RequestType
+AccountComparators ..> Account : Comparator<Account>
+
+' --- dependencies: Registration ---
+Registration ..> BankService : isPhoneUsed()
+
+' --- dependencies: menus ---
+ClientMenu ..> Account
+ClientMenu ..> CreditAccount : cast, payOffLoan()
+ClientMenu ..> SavingsAccount : cast, addInterest()
+ClientMenu ..> CardTariff : displayTariff()
+ClientMenu ..> BankService : submitRequest()
+ClientMenu ..> RequestType
+ClientMenu ..> AccountNotFoundException : catch
+
+OperatorMenu ..> BankService
+OperatorMenu ..> AccountComparators
+OperatorMenu ..> AccountNotFoundException : catch
+
+' --- dependencies: Runner (entry point, local variables only) ---
+Runner ..> BankService : <<create>>
+Runner ..> Registration : <<create>>
+Runner ..> CardTariff : <<create>>
+Runner ..> CreditAccount : <<create>>
+Runner ..> DebitAccount : <<create>>
+Runner ..> SavingsAccount : <<create>>
+Runner ..> BusinessAccount : <<create>>
+Runner ..> Account
+Runner ..> ClientMenu : open()
+Runner ..> OperatorMenu : open()
+
+@enduml
